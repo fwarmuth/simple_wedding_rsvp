@@ -1,0 +1,44 @@
+{% extends 'bootstrap/base.html' %}
+
+{% block styles %}
+{{ super() }}
+	<style>
+		body { background: #f8f9fa; }
+    tr {
+    display: block;
+    padding-bottom: 20px;
+    }
+    td {
+      padding-right: 20px;
+    }    
+	</style>
+{% endblock %}
+
+
+{% block title %}
+Success {{ name }}
+{% endblock %}
+
+{% block content %}
+
+<style>
+
+</style>
+
+<div class="container">
+  <div class="row">
+    <div class="col-md-10 col-lg-8 mx-lg-auto mx-md-auto">
+
+      <!-- note, the id is not used in the template -->
+
+      <h1 class="pt-5 pb-2">Thank U!</h1>
+
+
+      <h5>Your invitation has been confirmed.</h5>
+
+      <br>
+      <p><a href="{{ url_for('index') }}">Return to search page</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}

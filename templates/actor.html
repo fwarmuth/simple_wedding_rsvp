@@ -1,0 +1,81 @@
+{% extends 'bootstrap/base.html' %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block styles %}
+{{ super() }}
+	<style>
+		body { background: #f8f9fa; }
+	</style>
+{% endblock %}
+
+
+{% block title %}
+Confirm Invitation {{ name }}
+{% endblock %}
+
+
+{% block content %}
+
+<style>
+  tr {
+    display: block;
+    padding-bottom: 20px;
+  }
+  td {
+    padding-right: 20px;
+  }
+</style>
+
+<div class="container">
+  <div class="row">
+    <div class="col-md-10 col-lg-8 mx-lg-auto mx-md-auto">
+
+      <!-- note, the id is not used in the template -->
+
+      <h1 class="pt-5 pb-2">{{ name }}</h1>
+      <br>
+
+      <p class="lead">Plase provide information below. Flag and confirm all the people who will come.</p>
+
+      <form method="POST">
+        {{ form.csrf_token }}
+        <table>
+
+          {% for person in form.people %}
+              <tr >
+                <td>{{ person.people_name(class='form-control') }}</td>
+                <td>{{ person.diet(class='form-control') }}</td>
+                <td>{{ person.check() }}</td>
+                	  <!--
+                {% for field in person %}
+                 <td>
+                    {{ field(class='') }}
+                </td>
+                {% endfor %}
+                    -->
+              </tr>
+          {% endfor %}
+        </table>
+        {{ form.submit(class='btn btn-primary') }}
+
+
+      </form>
+ 
+	  <!--
+      {{ wtf.quick_form(form) }}
+
+
+	      notice how the URL in the link above is rendered for
+	      Flask - it needs to name the FUNCTION, not the route
+
+
+	  <p>{{ people }}</p>
+          -->
+     <br>
+     <br>
+     <p><a href="{{ url_for('index') }}">Return to search page</a></p>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
