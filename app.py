@@ -10,7 +10,7 @@ import re
 app = Flask(__name__)
 
 # Flask-WTF requires an enryption key - the string can be anything
-app.config['SECRET_KEY'] = 'C2HWGVoMGfNTBsrYQg8EcMrdTimkZfAb'
+app.config['SECRET_KEY'] = 'IAmARealSecret!!!!!!!!!!!!!!!!!!!!!!!!11'
 
 db_name = 'rsvp.db'
 
@@ -153,4 +153,4 @@ def internal_server_error(e):
 
 # keep this as is
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=True, host='0.0.0.0', port=1337)
