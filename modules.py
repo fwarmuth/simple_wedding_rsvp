@@ -13,12 +13,12 @@ def get_names(source):
 def get_actor(source, id):
     for row in source:
         if id == str( row["id"] ):
-            name = row["name"]
+            group_name = row["group_name"]
             people = row["people"]
             # change number to string
             id = str(id)
             # return these if id is valid
-            return id, name, people
+            return id, group_name, people
     # return these if id is not valid - not a great solution, but simple
     return "Unknown", "Unknown", ""
 

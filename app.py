@@ -1,11 +1,11 @@
 from flask import Flask, render_template, redirect, url_for
 from flask_bootstrap import Bootstrap
-from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, BooleanField, FormField, FieldList, TextAreaField, SelectField, IntegerField
-from wtforms.validators import DataRequired
+from flask_sqlalchemy import SQLAlchemy
+
+from src.forms import PeopleForm, WelcomeForm
+
 from data import ACTORS
 from modules import get_names, get_actor, get_id
-from flask_sqlalchemy import SQLAlchemy
 import re
 app = Flask(__name__)
 
@@ -24,56 +24,32 @@ Bootstrap(app)
 # this variable, db, will be used for all SQLAlchemy commands
 db = SQLAlchemy(app)
 
-# with Flask-WTF, each web form is represented by a class
-# "NameForm" can change; "(FlaskForm)" cannot
-# see the route for "/" and "index.html" to see how this is used
-
+# Class representing the data structure model within tha database
 class Invitation(db.Model):
     __tablename__ = 'invitation'
     pid = db.Column(db.Integer, primary_key=True)
+    group_name = db.Column(db.String)
     name = db.Column(db.String, primary_key=True)
     diet = db.Column(db.String)
     isConfirmed = db.Column(db.Boolean, default = False)
 
-    def __init__(self, pid, name, diet, isConfirmed):
+    def __init__(self, pid, group_name, name, diet, isConfirmed):
         self.pid = pid
+        self.group_name = group_name
         self.name = name
         self.diet = diet
         self.isConfirmed = isConfirmed
-
-class NameForm(FlaskForm):
-    name = IntegerField('Which is your Invitation ID : ', validators=[DataRequired()])
-    submit = SubmitField('Submit')
-
-class PersonForm(FlaskForm):
-    people_name = StringField(validators = [DataRequired()])
-    check = BooleanField()
-    diet = SelectField( choices=[('Normal'), ('Vegan'), ('Vegetarian')])
-
-class PeopleForm(FlaskForm):
-    people = FieldList(FormField(PersonForm), min_entries = 0)
-    submit = SubmitField('Submit')   
 
 def formatList(people, id):
     l = []
     for person in people:
         d = {}
         query = Invitation.query.with_entities(Invitation.name).filter_by(pid=id, name=person['people_name']).all()
-        a = (str(query))
-        a = a.removeprefix("[('")
-        a = a.removesuffix("',)]")
-        d['people_name'] = a
+        d['people_name'] = query[0]['name']
         query = Invitation.query.with_entities(Invitation.diet).filter_by(pid=id, name=person['people_name']).all()
-        a = (str(query))
-        a = a.removeprefix("[('")
-        a = a.removesuffix("',)]")
-        d['diet'] = a
+        d['diet'] = query[0]['diet']
         query = Invitation.query.with_entities(Invitation.isConfirmed).filter_by(pid=id, name=person['people_name']).all()
-        if "False" not in str(query):
-            d['check'] = True
-        else:
-            d['check'] = False
-        print(query)
+        d['check'] = query[0]['isConfirmed']
         l.append(d)
     return l
 
@@ -85,7 +61,7 @@ def index():
     print(names)
     # you must tell the variable 'form' what you named the class, above
     # 'form' is the variable name used in this template: index.html
-    form = NameForm()
+    form = WelcomeForm()
     message = ""
     if form.validate_on_submit():
         name = int(form.name.data)
@@ -101,12 +77,11 @@ def index():
 
 @app.route('/actor/<id>', methods=['GET', 'POST'])
 def actor(id):
-
     # run function to get actor data based on the id in the path
-    id, name, people = get_actor(ACTORS, id)
-    if Invitation.query.filter_by(pid=id).first() is None:
+    id, group_name, people = get_actor(ACTORS, id)
+    if Invitation.query.filter_by(pid=id).first() is None: # if not in database
         form = PeopleForm(people=people)
-    else:
+    else: # already in database
         l = formatList(people, id)
         form = PeopleForm(people=l)
     if form.is_submitted():
@@ -116,7 +91,7 @@ def actor(id):
                 name = person['people_name']
                 diet = person['diet']
                 isConfirmed = person['check']
-                record = Invitation(pid, name, diet, isConfirmed)
+                record = Invitation(pid, group_name, name, diet, isConfirmed)
                 db.session.add(record)
                 db.session.commit()
         else:
@@ -129,12 +104,12 @@ def actor(id):
                 db.session.commit()
             
         return redirect( url_for('success'))
-    if name == "Unknown":
+    if group_name == "Unknown":
         # redirect the browser to the error template
         return render_template('404.html'), 404
     else:
         # pass all the data for the selected actor to the template
-        return render_template('actor.html', id=id, name=name, people=people, form=form)
+        return render_template('actor.html', id=id, name=group_name, people=people, form=form)
 
 @app.route('/success', methods=['GET', 'POST'])
 def success():
