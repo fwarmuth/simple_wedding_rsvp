@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 from src.forms import PeopleForm, WelcomeForm
 
-from data import ACTORS
+from data import Invites
 from modules import get_names, get_actor, get_id
 import re
 app = Flask(__name__)
@@ -57,7 +57,7 @@ def formatList(people, id):
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    names = get_names(ACTORS)
+    names = get_names(Invites)
     print(names)
     # you must tell the variable 'form' what you named the class, above
     # 'form' is the variable name used in this template: index.html
@@ -68,15 +68,15 @@ def index():
         if name in names:
             # empty the form field
             form.name.data = ""
-            id = get_id(ACTORS, name)
+            id = get_id(Invites, name)
             # redirect the browser to another route and template
-            return redirect( url_for('actor', id=id) )
+            return redirect( url_for('invite', id=id) )
         else:
             message = "That actor is not in our database."
     return render_template('index.html', names=names, form=form, message=message)
 
-@app.route('/actor/<id>', methods=['GET', 'POST'])
-def actor(id):
+@app.route('/invite/<id>', methods=['GET', 'POST'])
+def invite(id):
     # run function to get actor data based on the id in the path
     id, group_name, people = get_actor(ACTORS, id)
     if Invitation.query.filter_by(pid=id).first() is None: # if not in database
@@ -104,12 +104,13 @@ def actor(id):
                 db.session.commit()
             
         return redirect( url_for('success'))
+    
     if group_name == "Unknown":
         # redirect the browser to the error template
         return render_template('404.html'), 404
     else:
         # pass all the data for the selected actor to the template
-        return render_template('actor.html', id=id, name=group_name, people=people, form=form)
+        return render_template('invite.html', id=id, name=group_name, people=people, form=form)
 
 @app.route('/success', methods=['GET', 'POST'])
 def success():
