@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+
 {% extends 'bootstrap/base.html' %}
 {% import "bootstrap/wtf.html" as wtf %}
 
@@ -10,7 +12,7 @@
 
 
 {% block title %}
-Confirm Invitation {{ name }}
+Confirm Invitation
 {% endblock %}
 
 
@@ -32,32 +34,29 @@ Confirm Invitation {{ name }}
 
       <!-- note, the id is not used in the template -->
 
-      <h1 class="pt-5 pb-2">{{ name }}</h1>
+      <h1 class="pt-5 pb-2"> Einladung bestätigen für {{ group_name }} </h1>
       <br>
 
-      <p class="lead">Plase provide information below. Flag and confirm all the people who will come.</p>
+      <p class="lead">Bitte prüfe unten die Informationen. Markieren und bestätige alle Personen, die kommen werden! </p>
 
       <form method="POST">
         {{ form.csrf_token }}
-        <table>
-
+        <h3>Gästeliste:</h3>
+        <table class="table">
           {% for person in form.people %}
-              <tr >
-                <td>{{ person.people_name(class='form-control') }}</td>
-                <td>{{ person.diet(class='form-control') }}</td>
-                <td>{{ person.check() }}</td>
-                	  <!--
-                {% for field in person %}
-                 <td>
-                    {{ field(class='') }}
-                </td>
-                {% endfor %}
-                    -->
-              </tr>
+          <tr>
+            <td>Gastname: {{ person.guest_name(class='form-control') }}</td>
+            <td>Ernährungsweise: {{ person.diet(class='form-control') }}</td>
+            <td>Zusage: {{ person.isConfirmed() }}</td>
+          </tr>
           {% endfor %}
         </table>
+        <h3>Sonderwünsche:</h3>
+
         {{ form.submit(class='btn btn-primary') }}
 
+    </tbody>
+</table>
 
       </form>
  

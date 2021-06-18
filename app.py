@@ -2,10 +2,10 @@ from flask import Flask, render_template, redirect, url_for
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
 
-from src.forms import PeopleForm, WelcomeForm
+from src.forms import InviteForm, WelcomeForm
 
 from data import Invites
-from modules import get_names, get_actor, get_id
+from modules import get_names, get_invite, get_id
 import re
 app = Flask(__name__)
 
@@ -29,29 +29,44 @@ class Invitation(db.Model):
     __tablename__ = 'invitation'
     pid = db.Column(db.Integer, primary_key=True)
     group_name = db.Column(db.String)
-    name = db.Column(db.String, primary_key=True)
+    guest_name = db.Column(db.String, primary_key=True)
     diet = db.Column(db.String)
     isConfirmed = db.Column(db.Boolean, default = False)
 
-    def __init__(self, pid, group_name, name, diet, isConfirmed):
+    def __init__(self, pid, group_name, guest_name, diet, isConfirmed):
         self.pid = pid
         self.group_name = group_name
-        self.name = name
+        self.guest_name = guest_name
         self.diet = diet
         self.isConfirmed = isConfirmed
-
-def formatList(people, id):
-    l = []
-    for person in people:
+    
+    def to_dict(self):
         d = {}
-        query = Invitation.query.with_entities(Invitation.name).filter_by(pid=id, name=person['people_name']).all()
-        d['people_name'] = query[0]['name']
-        query = Invitation.query.with_entities(Invitation.diet).filter_by(pid=id, name=person['people_name']).all()
-        d['diet'] = query[0]['diet']
-        query = Invitation.query.with_entities(Invitation.isConfirmed).filter_by(pid=id, name=person['people_name']).all()
-        d['check'] = query[0]['isConfirmed']
-        l.append(d)
-    return l
+        for key, value in self.__dict__.items():
+            if key.startswith('_'):
+                continue
+            d[key] = value
+        return d
+
+class extras(db.Model):
+    __tablename__ = 'extras'
+    pid = db.Column(db.Integer, primary_key=True)
+    music_choice_1 = db.Column(db.String)
+    music_choice_2 = db.Column(db.String)
+    music_choice_3 = db.column(db.String)
+    shuttle_service = db.Column(db.Boolean, default = False)
+    special_wishes = db.column(db.String)
+
+    def __init__(self, pid):
+        self.pid = pid
+        self.music_choice_1 = ""
+        self.music_choice_2 = ""
+        self.music_choice_3 = ""
+        self.shuttle_service = False
+        self.special_wishes = ""
+
+
+
 
 # all Flask routes below
 
@@ -78,39 +93,57 @@ def index():
 @app.route('/invite/<id>', methods=['GET', 'POST'])
 def invite(id):
     # run function to get actor data based on the id in the path
-    id, group_name, people = get_actor(ACTORS, id)
-    if Invitation.query.filter_by(pid=id).first() is None: # if not in database
-        form = PeopleForm(people=people)
+
+    # check if ID is in database:
+    if Invitation.query.filter_by(pid=id).first() is None:
+        # get default values from data.py
+        id, group_name, people = get_invite(Invites, id)
+        # if id not in valid
+        if not id:
+            # redirect the browser to the error template
+            return render_template('404.html'), 404
+
+        form = InviteForm(people=people)
+
     else: # already in database
-        l = formatList(people, id)
-        form = PeopleForm(people=l)
+        # get invite with pid and return all people
+        people = Invitation.query.filter_by(pid=id).all()
+        group_name = people[0].group_name
+        # turn invitations to dicts
+        list_of_people = []
+        for person in people:
+            # iter through invitations
+            d = person.to_dict()
+            list_of_people.append(d)
+
+        form = InviteForm(people=list_of_people)
+        # group_name = people[
+
     if form.is_submitted():
         if Invitation.query.filter_by(pid=id).first() is None:
+            # first submision, add to database
             for person in form.data["people"]:
                 pid = id
-                name = person['people_name']
+                name = person['guest_name']
                 diet = person['diet']
-                isConfirmed = person['check']
+                isConfirmed = person['isConfirmed']
                 record = Invitation(pid, group_name, name, diet, isConfirmed)
                 db.session.add(record)
                 db.session.commit()
         else:
-            for person in form.data["people"]:
-                invitation = Invitation.query.filter(Invitation.pid == id, Invitation.name == person['people_name']).first()
+            # change existing entry
+            for idx, person in enumerate(form.data["people"]): # iter through fields on form
+                invitation = Invitation.query.filter(Invitation.pid == id, Invitation.guest_name == people[idx].guest_name).first()
                 invitation.pid = id
-                invitation.name = person['people_name']
+                invitation.guest_name = person['guest_name']
                 invitation.diet = person['diet']
-                invitation.isConfirmed = person['check']
+                invitation.isConfirmed = person['isConfirmed']
                 db.session.commit()
-            
+
         return redirect( url_for('success'))
     
-    if group_name == "Unknown":
-        # redirect the browser to the error template
-        return render_template('404.html'), 404
-    else:
         # pass all the data for the selected actor to the template
-        return render_template('invite.html', id=id, name=group_name, people=people, form=form)
+    return render_template('invite.html', id=id, people=people, form=form, group_name=group_name)
 
 @app.route('/success', methods=['GET', 'POST'])
 def success():
