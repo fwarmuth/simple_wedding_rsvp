@@ -52,6 +52,20 @@ Confirm Invitation
           {% endfor %}
         </table>
         <h3>Sonderwünsche:</h3>
+        <table class="table">
+          <tr> 3 Musikwünsche:
+            <td> {{ form.extras.music_choice_1 }}</td>
+            <td> {{ form.extras.music_choice_2 }}</td>
+            <td> {{ form.extras.music_choice_3 }}</td>
+          </tr>
+          </tr>
+          <tr>
+            <td> Shuttleservice: {{ form.extras.shuttle_service }}</td>
+          </tr>
+          <tr>
+            <td> Sonstiges: {{ form.extras.special_wishes }}</td>
+          </tr>
+        </table>
 
         {{ form.submit(class='btn btn-primary') }}
 

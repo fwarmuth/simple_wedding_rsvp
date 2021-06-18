@@ -2,7 +2,7 @@ from flask import Flask, render_template, redirect, url_for
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
 
-from src.forms import InviteForm, WelcomeForm
+from src.forms import ExtrasForm, InviteForm, WelcomeForm
 
 from data import Invites
 from modules import get_names, get_invitation_preset, get_id
@@ -48,25 +48,30 @@ class Invitation(db.Model):
             d[key] = value
         return d
 
-class extras(db.Model):
+class Extras(db.Model):
     __tablename__ = 'extras'
     pid = db.Column(db.Integer, primary_key=True)
     music_choice_1 = db.Column(db.String)
     music_choice_2 = db.Column(db.String)
-    music_choice_3 = db.column(db.String)
+    music_choice_3 = db.Column(db.String)
     shuttle_service = db.Column(db.Boolean, default = False)
-    special_wishes = db.column(db.String)
+    special_wishes = db.Column(db.String)
 
     def __init__(self, pid):
         self.pid = pid
-        self.music_choice_1 = ""
-        self.music_choice_2 = ""
-        self.music_choice_3 = ""
+        self.music_choice_1 = "Erster Musikwunsch"
+        self.music_choice_2 = "Zweiter Musikwunsch"
+        self.music_choice_3 = "Dritter Musikwunsch"
         self.shuttle_service = False
-        self.special_wishes = ""
+        self.special_wishes = "Noch was?"
 
-
-
+    def to_dict(self):
+        d = {}
+        for key, value in self.__dict__.items():
+            if key.startswith('_'):
+                continue
+            d[key] = value
+        return d
 
 # all Flask routes below
 
@@ -93,50 +98,68 @@ def index():
 
 @app.route('/invite/<id>', methods=['POST'])
 def invite_post(id):
-    # get form from post req, dont know how that works
-    form = InviteForm()
-    if form.is_submitted():
-        if Invitation.query.filter_by(pid=id).first() is None:
-            # get preset data
-            _ , group_name, _ = get_invitation_preset(Invites, id)
-            # first submision, add to database
-            for person in form.data["people"]:
-                pid = id
-                name = person['guest_name']
-                diet = person['diet']
-                isConfirmed = person['isConfirmed']
-                record = Invitation(pid, group_name, name, diet, isConfirmed)
-                db.session.add(record)
-                db.session.commit()
-        else:
-            # change existing entry
-            # get all people of the pid, needed to match the to be changed entry.
-            people = Invitation.query.filter_by(pid=id).all()
-            for idx, person in enumerate(form.data["people"]): # iter through fields on form
-                # get current entry
-                invitation = Invitation.query.filter(Invitation.pid == id, Invitation.guest_name == people[idx].guest_name).first()
-                # modufy the fields
-                invitation.guest_name = person['guest_name']
-                invitation.diet = person['diet']
-                invitation.isConfirmed = person['isConfirmed']
-                # commit to database
-                db.session.commit()
+    ## submission of data
+    # handle guests
+    form = InviteForm() # get form from post req, dont know how that works
+    if Invitation.query.filter_by(pid=id).first() is None:
+        # get preset data
+        _ , group_name, _ = get_invitation_preset(Invites, id)
+        # first submision, add to database
+        for person in form.data["people"]:
+            pid = id
+            name = person['guest_name']
+            diet = person['diet']
+            isConfirmed = person['isConfirmed']
+            record = Invitation(pid, group_name, name, diet, isConfirmed)
+            db.session.add(record)
+            db.session.commit()
+    else:
+        # change existing entry
+        # get all people of the pid, needed to match the to be changed entry.
+        people = Invitation.query.filter_by(pid=id).all()
+        for idx, person in enumerate(form.data["people"]): # iter through fields on form
+            # get current entry
+            invitation = Invitation.query.filter(Invitation.pid == id, Invitation.guest_name == people[idx].guest_name).first()
+            # modufy the fields
+            invitation.guest_name = person['guest_name']
+            invitation.diet = person['diet']
+            invitation.isConfirmed = person['isConfirmed']
+            # commit to database
+            db.session.commit()
+    # handle extras
+    if Extras.query.filter_by(pid=id).first() is None:
+        # if no extras in database
+        record = Extras(id)
+        record.music_choice_1 = form.extras.music_choice_1.data
+        record.music_choice_2 = form.extras.music_choice_2.data
+        record.music_choice_3 = form.extras.music_choice_3.data
+        record.shuttle_service = form.extras.shuttle_service.data
+        record.special_wishes = form.extras.special_wishes.data
+        db.session.add(record)
+        db.session.commit()
+    else:
+        record = Extras.query.filter_by(pid=id).first()
+        record.music_choice_1 = form.extras.music_choice_1.data
+        record.music_choice_2 = form.extras.music_choice_2.data
+        record.music_choice_3 = form.extras.music_choice_3.data
+        record.shuttle_service = form.extras.shuttle_service.data
+        record.special_wishes = form.extras.special_wishes.data
+        db.session.commit()
 
-        return redirect( url_for('success'))
+    return redirect( url_for('success'))
+
 @app.route('/invite/<id>', methods=['GET'])
 def invite_get(id):
     # run function to get actor data based on the id in the path
 
-    # check if ID is in database:
+    # check if invitation ID is in database:
     if Invitation.query.filter_by(pid=id).first() is None:
         # get default values from data.py
-        id, group_name, people = get_invitation_preset(Invites, id)
+        id, group_name, list_of_people = get_invitation_preset(Invites, id)
         # if id not in valid
         if not id:
             # redirect the browser to the error template
             return render_template('404.html'), 404
-
-        form = InviteForm(people=people)
 
     else: # already in database
         # get invite with pid and return all people
@@ -148,7 +171,16 @@ def invite_get(id):
             # iter through invitations
             d = person.to_dict()
             list_of_people.append(d)
-        form = InviteForm(people=list_of_people)
+
+    # check if invitaion ID is in extras database:
+    if Extras.query.filter_by(pid=id).first() is None:
+        # create new form
+        dic = Extras(id)
+    else:
+        dic = Extras.query.filter_by(pid=id).first().to_dict()
+    
+    form = InviteForm(people=list_of_people, extras=dic)
+
 
     
         # pass all the data for the selected actor to the template

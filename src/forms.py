@@ -16,13 +16,14 @@ class PersonForm(FlaskForm):
     diet = SelectField( choices=[('Alles'), ('Vegan'), ('Vegetarisch')])
 
 class ExtrasForm(FlaskForm):
-    music_choice_1 = StringField()
-    music_choice_2 = StringField()
-    shutle_service = BooleanField()
-    music_choice_3 = StringField()
-    special_wishes = TextAreaField("Extra wishes?")
+    music_choice_1 = StringField(default="Erster Musikwunsch")
+    music_choice_2 = StringField(default="Zweiter Musikwunsch")
+    music_choice_3 = StringField(default="Dritter Musikwunsch")
+    shuttle_service = BooleanField()
+    special_wishes = TextAreaField(default="Sonstiges?\nKinderhochsitz?")
 
 
 class InviteForm(FlaskForm):
     people = FieldList(FormField(PersonForm), min_entries = 0)
+    extras = FormField(ExtrasForm)
     submit = SubmitField('Submit')
