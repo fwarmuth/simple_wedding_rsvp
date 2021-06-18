@@ -5,7 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 from src.forms import InviteForm, WelcomeForm
 
 from data import Invites
-from modules import get_names, get_invite, get_id
+from modules import get_names, get_invitation_preset, get_id
 import re
 app = Flask(__name__)
 
@@ -85,19 +85,52 @@ def index():
             form.name.data = ""
             id = get_id(Invites, name)
             # redirect the browser to another route and template
-            return redirect( url_for('invite', id=id) )
+            return redirect( url_for('invite_get', id=id) )
         else:
             message = "That actor is not in our database."
     return render_template('index.html', names=names, form=form, message=message)
 
-@app.route('/invite/<id>', methods=['GET', 'POST'])
-def invite(id):
+
+@app.route('/invite/<id>', methods=['POST'])
+def invite_post(id):
+    # get form from post req, dont know how that works
+    form = InviteForm()
+    if form.is_submitted():
+        if Invitation.query.filter_by(pid=id).first() is None:
+            # get preset data
+            _ , group_name, _ = get_invitation_preset(Invites, id)
+            # first submision, add to database
+            for person in form.data["people"]:
+                pid = id
+                name = person['guest_name']
+                diet = person['diet']
+                isConfirmed = person['isConfirmed']
+                record = Invitation(pid, group_name, name, diet, isConfirmed)
+                db.session.add(record)
+                db.session.commit()
+        else:
+            # change existing entry
+            # get all people of the pid, needed to match the to be changed entry.
+            people = Invitation.query.filter_by(pid=id).all()
+            for idx, person in enumerate(form.data["people"]): # iter through fields on form
+                # get current entry
+                invitation = Invitation.query.filter(Invitation.pid == id, Invitation.guest_name == people[idx].guest_name).first()
+                # modufy the fields
+                invitation.guest_name = person['guest_name']
+                invitation.diet = person['diet']
+                invitation.isConfirmed = person['isConfirmed']
+                # commit to database
+                db.session.commit()
+
+        return redirect( url_for('success'))
+@app.route('/invite/<id>', methods=['GET'])
+def invite_get(id):
     # run function to get actor data based on the id in the path
 
     # check if ID is in database:
     if Invitation.query.filter_by(pid=id).first() is None:
         # get default values from data.py
-        id, group_name, people = get_invite(Invites, id)
+        id, group_name, people = get_invitation_preset(Invites, id)
         # if id not in valid
         if not id:
             # redirect the browser to the error template
@@ -115,32 +148,8 @@ def invite(id):
             # iter through invitations
             d = person.to_dict()
             list_of_people.append(d)
-
         form = InviteForm(people=list_of_people)
-        # group_name = people[
 
-    if form.is_submitted():
-        if Invitation.query.filter_by(pid=id).first() is None:
-            # first submision, add to database
-            for person in form.data["people"]:
-                pid = id
-                name = person['guest_name']
-                diet = person['diet']
-                isConfirmed = person['isConfirmed']
-                record = Invitation(pid, group_name, name, diet, isConfirmed)
-                db.session.add(record)
-                db.session.commit()
-        else:
-            # change existing entry
-            for idx, person in enumerate(form.data["people"]): # iter through fields on form
-                invitation = Invitation.query.filter(Invitation.pid == id, Invitation.guest_name == people[idx].guest_name).first()
-                invitation.pid = id
-                invitation.guest_name = person['guest_name']
-                invitation.diet = person['diet']
-                invitation.isConfirmed = person['isConfirmed']
-                db.session.commit()
-
-        return redirect( url_for('success'))
     
         # pass all the data for the selected actor to the template
     return render_template('invite.html', id=id, people=people, form=form, group_name=group_name)

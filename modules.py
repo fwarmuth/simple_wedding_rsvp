@@ -10,7 +10,7 @@ def get_names(source):
     return sorted(names)
 
 # find the row that matches the id in the URL, retrieve group_name and people
-def get_invite(source, id):
+def get_invitation_preset(source, id):
     for row in source:
         if id == str( row["id"] ):
             group_name = row["group_name"]
