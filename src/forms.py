@@ -7,7 +7,7 @@ from wtforms.validators import DataRequired
 # "NameForm" can change; "(FlaskForm)" cannot
 # see the route for "/" and "index.html" to see how this is used
 class WelcomeForm(FlaskForm):
-    input = IntegerField('Einladungsnummer/Invitation ID : ', validators=[DataRequired()])
+    input = StringField('Einladungsnummer/Invitation ID : ', validators=[DataRequired()])
     submit = SubmitField('Weiter')
 
 class PersonForm(FlaskForm):

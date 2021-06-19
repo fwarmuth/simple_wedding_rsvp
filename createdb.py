@@ -4,7 +4,7 @@ meta = MetaData()
 
 invitation = Table(
     'invitation', meta,
-    Column('pid', Integer, primary_key=True),
+    Column('pid', String, primary_key=True),
     Column('group_name', String),
     Column('guest_name', String, primary_key=True),
     Column('diet', String),
@@ -13,7 +13,7 @@ invitation = Table(
 
 extras = Table(
     'extras', meta,
-    Column('pid', Integer, primary_key=True),
+    Column('pid', String, primary_key=True),
     Column('music_choice_1', String),
     Column('music_choice_2', String),
     Column('music_choice_3', String),

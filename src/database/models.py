@@ -5,7 +5,7 @@ from src.database.db import db
 # Class representing the data structure model within tha database
 class Invitation(db.Model):
     __tablename__ = 'invitation'
-    pid = db.Column(db.Integer, primary_key=True)
+    pid = db.Column(db.String, primary_key=True)
     group_name = db.Column(db.String)
     guest_name = db.Column(db.String, primary_key=True)
     diet = db.Column(db.String)
@@ -38,7 +38,7 @@ class Invitation(db.Model):
 
 class Extras(db.Model):
     __tablename__ = 'extras'
-    pid = db.Column(db.Integer, primary_key=True)
+    pid = db.Column(db.String, primary_key=True)
     music_choice_1 = db.Column(db.String)
     music_choice_2 = db.Column(db.String)
     music_choice_3 = db.Column(db.String)
