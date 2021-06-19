@@ -73,7 +73,13 @@ class Extras(db.Model):
             d[key] = value
         return d
 
-# all Flask routes below
+    def from_form(self, form):
+        #TODO comment docstring
+        self.music_choice_1 = form.music_choice_1.data
+        self.music_choice_2 = form.music_choice_2.data
+        self.music_choice_3 = form.music_choice_3.data
+        self.shuttle_service = form.shuttle_service.data
+        self.special_wishes = form.special_wishes.data
 
 
 @app.route('/', methods=['POST'])
@@ -99,7 +105,6 @@ def index_get():
 
 @app.route('/invite/<id>', methods=['POST'])
 def invite_post(id):
-    ## submission of data
     # handle guests
     form = InviteForm() # get form from post req, dont know how that works
     if Invitation.query.filter_by(pid=id).first() is None:
@@ -127,25 +132,18 @@ def invite_post(id):
             invitation.isConfirmed = person['isConfirmed']
             # commit to database
             db.session.commit()
+
     # handle extras
-    if Extras.query.filter_by(pid=id).first() is None:
-        # if no extras in database
+    if Extras.query.filter_by(pid=id).first() is None: # if no extras in database, add to database
         record = Extras(id)
-        record.music_choice_1 = form.extras.music_choice_1.data
-        record.music_choice_2 = form.extras.music_choice_2.data
-        record.music_choice_3 = form.extras.music_choice_3.data
-        record.shuttle_service = form.extras.shuttle_service.data
-        record.special_wishes = form.extras.special_wishes.data
         db.session.add(record)
         db.session.commit()
-    else:
-        record = Extras.query.filter_by(pid=id).first()
-        record.music_choice_1 = form.extras.music_choice_1.data
-        record.music_choice_2 = form.extras.music_choice_2.data
-        record.music_choice_3 = form.extras.music_choice_3.data
-        record.shuttle_service = form.extras.shuttle_service.data
-        record.special_wishes = form.extras.special_wishes.data
-        db.session.commit()
+    # get data from database
+    record = Extras.query.filter_by(pid=id).first()
+    # fill with data from webform
+    record.from_form(form.extras)
+    # commit changes to database
+    db.session.commit()
 
     return redirect( url_for('success'))
 
@@ -174,12 +172,12 @@ def invite_get(id):
     # check if invitaion ID is in extras database:
     if Extras.query.filter_by(pid=id).first() is None:
         # create new form
-        dic = Extras(id)
+        extras_dict = Extras(id)
     else:
-        dic = Extras.query.filter_by(pid=id).first().to_dict()
+        extras_dict = Extras.query.filter_by(pid=id).first().to_dict()
     
     # create form which gets presented
-    form = InviteForm(people=list_of_people, extras=dic)
+    form = InviteForm(people=list_of_people, extras=extras_dict)
     
     return render_template('invite.html', id=id, form=form, group_name=group_name)
 
