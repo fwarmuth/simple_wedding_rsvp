@@ -7,7 +7,7 @@ from wtforms.validators import DataRequired
 # "NameForm" can change; "(FlaskForm)" cannot
 # see the route for "/" and "index.html" to see how this is used
 class WelcomeForm(FlaskForm):
-    name = IntegerField('Einladungsnummer/Invitation ID : ', validators=[DataRequired()])
+    input = IntegerField('Einladungsnummer/Invitation ID : ', validators=[DataRequired()])
     submit = SubmitField('Weiter')
 
 class PersonForm(FlaskForm):
@@ -20,7 +20,7 @@ class ExtrasForm(FlaskForm):
     music_choice_2 = StringField(default="Zweiter Musikwunsch")
     music_choice_3 = StringField(default="Dritter Musikwunsch")
     shuttle_service = BooleanField()
-    special_wishes = TextAreaField(default="Sonstiges?\nKinderhochsitz?")
+    special_wishes = TextAreaField(default="Sonstiges?\nKinderhochsitz, Schlafplatz?, Unvertraeglichkeiten")
 
 
 class InviteForm(FlaskForm):

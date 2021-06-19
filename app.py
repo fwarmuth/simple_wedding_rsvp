@@ -75,25 +75,26 @@ class Extras(db.Model):
 
 # all Flask routes below
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    names = get_names(Invites)
-    print(names)
-    # you must tell the variable 'form' what you named the class, above
-    # 'form' is the variable name used in this template: index.html
+
+@app.route('/', methods=['POST'])
+def index_post():
+    # get WelcomeFrom
+    form = WelcomeForm()
+    # get given entry as string
+    entry = str(form.input.data)
+    if entry in get_names(Invites):
+        # redirect the browser to another route and template
+        return redirect( url_for('invite_get', id=entry) )
+    else:
+        message = "That ID is not known!"
+        return render_template('index.html', form=form, message=message)
+
+@app.route('/', methods=['GET'])
+def index_get():
+    # create new WelcomeForm
     form = WelcomeForm()
     message = ""
-    if form.validate_on_submit():
-        name = int(form.name.data)
-        if name in names:
-            # empty the form field
-            form.name.data = ""
-            id = get_id(Invites, name)
-            # redirect the browser to another route and template
-            return redirect( url_for('invite_get', id=id) )
-        else:
-            message = "That actor is not in our database."
-    return render_template('index.html', names=names, form=form, message=message)
+    return render_template('index.html', form=form, message=message)
 
 
 @app.route('/invite/<id>', methods=['POST'])
@@ -150,8 +151,6 @@ def invite_post(id):
 
 @app.route('/invite/<id>', methods=['GET'])
 def invite_get(id):
-    # run function to get actor data based on the id in the path
-
     # check if invitation ID is in database:
     if Invitation.query.filter_by(pid=id).first() is None:
         # get default values from data.py
@@ -179,12 +178,10 @@ def invite_get(id):
     else:
         dic = Extras.query.filter_by(pid=id).first().to_dict()
     
+    # create form which gets presented
     form = InviteForm(people=list_of_people, extras=dic)
-
-
     
-        # pass all the data for the selected actor to the template
-    return render_template('invite.html', id=id, people=people, form=form, group_name=group_name)
+    return render_template('invite.html', id=id, form=form, group_name=group_name)
 
 @app.route('/success', methods=['GET', 'POST'])
 def success():
