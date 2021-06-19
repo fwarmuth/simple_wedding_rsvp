@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 from src.forms import ExtrasForm, InviteForm, WelcomeForm
 
-from data import Invites
+from preset_data import Invites
 from modules import get_names, get_invitation_preset, get_id
 import re
 app = Flask(__name__)
