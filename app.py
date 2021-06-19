@@ -1,13 +1,12 @@
 from flask import Flask, render_template, redirect, url_for
 from flask_bootstrap import Bootstrap
-from flask_sqlalchemy import SQLAlchemy
 
 from src.forms import InviteForm, WelcomeForm
 from src.database.db import db
 from src.database.models import Invitation, Extras
 
 from preset_data import Invites
-from modules import get_names, get_invitation_preset, get_id
+from src.io import get_pids, get_invitation_preset
 import re
 app = Flask(__name__)
 
@@ -17,7 +16,6 @@ app.config['SECRET_KEY'] = 'IAmARealSecret!!!!!!!!!!!!!!!!!!!!!!!!11'
 db_name = 'rsvp.db'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_name
-
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
 # Flask-Bootstrap requires this line
@@ -26,19 +24,6 @@ Bootstrap(app)
 # this variable, db, will be used for all SQLAlchemy commands
 db.init_app(app)
 
-@app.route('/', methods=['POST'])
-def index_post():
-    # get WelcomeFrom
-    form = WelcomeForm()
-    # get given entry as string
-    entry = str(form.input.data)
-    if entry in get_names(Invites):
-        # redirect the browser to another route and template
-        return redirect( url_for('invite_get', id=entry) )
-    else:
-        message = "That ID is not known!"
-        return render_template('index.html', form=form, message=message)
-
 @app.route('/', methods=['GET'])
 def index_get():
     # create new WelcomeForm
@@ -46,6 +31,52 @@ def index_get():
     message = ""
     return render_template('index.html', form=form, message=message)
 
+@app.route('/', methods=['POST'])
+def index_post():
+    # get WelcomeFrom
+    form = WelcomeForm()
+    # get given entry as string
+    entry = str(form.input.data)
+    if entry in get_pids(Invites):
+        # redirect the browser to another route and template
+        return redirect( url_for('invite_get', id=entry) )
+    else:
+        message = "That ID is not known!"
+        return render_template('index.html', form=form, message=message)
+
+
+@app.route('/invite/<id>', methods=['GET'])
+def invite_get(id):
+    # check if invitation ID is in database:
+    if Invitation.query.filter_by(pid=id).first() is None:
+        # get default values from data.py
+        _, group_name, list_of_people = get_invitation_preset(Invites, id)
+        # if id not in valid
+        if not id:
+            return render_template('404.html'), 404
+
+    else: # already in database
+        # get invite with pid and return all people
+        people = Invitation.query.filter_by(pid=id).all()
+        group_name = people[0].group_name
+        # turn invitations to dicts
+        list_of_people = []
+        for person in people:
+            # iter through invitations
+            d = person.to_dict()
+            list_of_people.append(d)
+
+    # check if invitaion ID is in extras database:
+    if Extras.query.filter_by(pid=id).first() is None:
+        # create new form
+        extras_dict = Extras(id)
+    else:
+        extras_dict = Extras.query.filter_by(pid=id).first().to_dict()
+    
+    # create form which gets redered
+    form = InviteForm(people=list_of_people, extras=extras_dict)
+    
+    return render_template('invite.html', id=id, form=form, group_name=group_name)
 
 @app.route('/invite/<id>', methods=['POST'])
 def invite_post(id):
@@ -83,40 +114,6 @@ def invite_post(id):
     db.session.commit()
 
     return redirect( url_for('success'))
-
-@app.route('/invite/<id>', methods=['GET'])
-def invite_get(id):
-    # check if invitation ID is in database:
-    if Invitation.query.filter_by(pid=id).first() is None:
-        # get default values from data.py
-        id, group_name, list_of_people = get_invitation_preset(Invites, id)
-        # if id not in valid
-        if not id:
-            # redirect the browser to the error template
-            return render_template('404.html'), 404
-
-    else: # already in database
-        # get invite with pid and return all people
-        people = Invitation.query.filter_by(pid=id).all()
-        group_name = people[0].group_name
-        # turn invitations to dicts
-        list_of_people = []
-        for person in people:
-            # iter through invitations
-            d = person.to_dict()
-            list_of_people.append(d)
-
-    # check if invitaion ID is in extras database:
-    if Extras.query.filter_by(pid=id).first() is None:
-        # create new form
-        extras_dict = Extras(id)
-    else:
-        extras_dict = Extras.query.filter_by(pid=id).first().to_dict()
-    
-    # create form which gets presented
-    form = InviteForm(people=list_of_people, extras=extras_dict)
-    
-    return render_template('invite.html', id=id, form=form, group_name=group_name)
 
 @app.route('/success', methods=['GET', 'POST'])
 def success():
