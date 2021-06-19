@@ -1,16 +1,11 @@
-FROM python:3.9-slim
+FROM python:3.6.9-slim
 
-RUN pip install pipenv
+# Copy current requrements.txt
+RUN mkdir /opt/app
+COPY requirements.txt /opt/app
+WORKDIR /opt/app
+RUN pip install -r requirements.txt
 
-ENV SRC_DIR /usr/local/src/rsvp
-ENV PYTHONPATH /usr/local/src/rsvp
-
-WORKDIR ${SRC_DIR}
-
-COPY Pipfile Pipfile.lock ${SRC_DIR}/
-
-RUN pipenv install --system --clear
-
-COPY ./ ${SRC_DIR}/
-
-CMD ["flask", "run", "-h", "0.0.0.0"]
+EXPOSE 80/tcp
+#
+ CMD ["python3", "app.py"]
