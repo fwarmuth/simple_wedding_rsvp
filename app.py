@@ -2,7 +2,7 @@ from flask import Flask, render_template, redirect, url_for
 from flask_bootstrap import Bootstrap
 from flask_sqlalchemy import SQLAlchemy
 
-from src.forms import ExtrasForm, InviteForm, WelcomeForm
+from src.forms import ExtrasForm, InviteForm, PersonForm, WelcomeForm
 
 from preset_data import Invites
 from modules import get_names, get_invitation_preset, get_id
@@ -33,12 +33,12 @@ class Invitation(db.Model):
     diet = db.Column(db.String)
     isConfirmed = db.Column(db.Boolean, default = False)
 
-    def __init__(self, pid, group_name, guest_name, diet, isConfirmed):
+    def __init__(self, pid, group_name):
         self.pid = pid
         self.group_name = group_name
-        self.guest_name = guest_name
-        self.diet = diet
-        self.isConfirmed = isConfirmed
+        self.guest_name = "NoName"
+        self.diet = "Alles"
+        self.isConfirmed = False
     
     def to_dict(self):
         d = {}
@@ -47,6 +47,16 @@ class Invitation(db.Model):
                 continue
             d[key] = value
         return d
+    
+    def from_preset(self, d: dict):
+        self.guest_name = d["guest_name"]
+        self.diet = "Alles"
+        self.isConfirmed = False 
+
+    def from_form(self, form: PersonForm):
+        self.guest_name = form.guest_name.data
+        self.diet = form.diet.data
+        self.isConfirmed = form.isConfirmed.data
 
 class Extras(db.Model):
     __tablename__ = 'extras'
@@ -73,7 +83,7 @@ class Extras(db.Model):
             d[key] = value
         return d
 
-    def from_form(self, form):
+    def from_form(self, form: ExtrasForm):
         #TODO comment docstring
         self.music_choice_1 = form.music_choice_1.data
         self.music_choice_2 = form.music_choice_2.data
@@ -107,31 +117,24 @@ def index_get():
 def invite_post(id):
     # handle guests
     form = InviteForm() # get form from post req, dont know how that works
+
     if Invitation.query.filter_by(pid=id).first() is None:
-        # get preset data
-        _ , group_name, _ = get_invitation_preset(Invites, id)
-        # first submision, add to database
-        for person in form.data["people"]:
-            pid = id
-            name = person['guest_name']
-            diet = person['diet']
-            isConfirmed = person['isConfirmed']
-            record = Invitation(pid, group_name, name, diet, isConfirmed)
+        # get needed preset data
+        pid , group_name, people = get_invitation_preset(Invites, id)
+        for person in people:
+            # create new empty entry
+            record = Invitation(pid, group_name)
+            record.from_preset(person)
             db.session.add(record)
             db.session.commit()
-    else:
-        # change existing entry
-        # get all people of the pid, needed to match the to be changed entry.
-        people = Invitation.query.filter_by(pid=id).all()
-        for idx, person in enumerate(form.data["people"]): # iter through fields on form
-            # get current entry
-            invitation = Invitation.query.filter(Invitation.pid == id, Invitation.guest_name == people[idx].guest_name).first()
-            # modufy the fields
-            invitation.guest_name = person['guest_name']
-            invitation.diet = person['diet']
-            invitation.isConfirmed = person['isConfirmed']
-            # commit to database
-            db.session.commit()
+    # get all people of the pid from data base
+    persons_in_database = Invitation.query.filter_by(pid=id).all()
+    for idx, person in enumerate(form.people): # iter through fields on form
+        # get current entry, that should be modified
+        invitation = Invitation.query.filter(Invitation.pid == id, Invitation.guest_name == persons_in_database[idx].guest_name).first()
+        # modify the fields
+        invitation.from_form(person)
+        db.session.commit()
 
     # handle extras
     if Extras.query.filter_by(pid=id).first() is None: # if no extras in database, add to database
